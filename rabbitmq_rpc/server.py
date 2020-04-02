@@ -8,14 +8,26 @@ from .queue import Queue
 logger = logging.getLogger(__name__)
 
 class RPCServer(Connector):
+    '''
+    RPC Server class
+    Parameters:
+    queue_name: queue name in rabbitmq server
+    consumers: optional parameters. You can pass list of Consumer objects.
+    threaded: True or False. If setted True, means run in multi-threads mode, otherwise in blocking mode.
+    amqp_url: Please refer to base class 'Connector'
+    host,port,username, passwd, exchange: Please refer to base class 'Connector'
+    num_threads: If threaded==True, RPC server can run in multi-threads mode. Then you can specify max threads you want.
+        Default -1, means automatically decide number of threads.
+    '''
 
-    def __init__(self,queue_name = None, consumers = None, *args, **kwargs):
+    def __init__(self,queue_name = None, consumers = None, num_threads=-1, *args, **kwargs):
         self._queues = {}
         if consumers is None:
             self._consumers = []
         else:
             self._consumers = consumers
         self.default_queue = queue_name or self.DEFUALT_QUEUE
+        self.num_threads =num_threads
 
         super(RPCServer, self).__init__(*args, **kwargs)
 
@@ -32,7 +44,8 @@ class RPCServer(Connector):
         self.setup_queues()
 
     def _setup_queue(self, queue_name):
-        dispatcher = MessageDispatcher(self._channel, self._exchange, threaded=self._threaded)
+        dispatcher = MessageDispatcher(self._channel, self._exchange, threaded=self._threaded,
+                                       threadpool_size=self.num_threads)
         queue = Queue(queue_name, dispatcher)
         self._queues[queue_name] = queue
         return queue

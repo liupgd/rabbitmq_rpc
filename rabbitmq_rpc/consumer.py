@@ -44,11 +44,14 @@ def consumer(name=None, queue=None, exclusive=False):
 
 class MessageDispatcher(object):
 
-    def __init__(self, channel, exchange='', threaded = True):
+    def __init__(self, channel, exchange='', threaded = True, threadpool_size = -1):
         self._channel = channel
         self.threads = []
         self._registries = {}
-        self._executor = ThreadPoolExecutor(5)
+        if threadpool_size <= 0:
+            self._executor = ThreadPoolExecutor()
+        else:
+            self._executor = ThreadPoolExecutor(threadpool_size)
         self._exchange = exchange
         self._threaded = threaded
 

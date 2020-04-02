@@ -1,10 +1,15 @@
-RPC use rabbitmq, cloned from [here](https://github.com/MidTin/rabbit-rpc)
+RPC based on rabbitmq, cloned from [here](https://github.com/MidTin/rabbit-rpc)
 
 ### How To Use
 The orignal code can just be runned in console and has problems in windows(Server side). So I modified some code. 
 Now, the server side supports both pika.BlockConnection and pika.SelectionConnection. 
 In BlockConnection mode, the server side can only be runned in single thread. In SelectionConnection mode, 
 the server can be runned in multi-threads(Not in windows).
+
+* Install:
+```buildoutcfg
+pip install rabbitmq-rpc
+```
 
 * Usage:  
 1.Create rabbitmq account in your rabbitmq server.  
@@ -14,7 +19,7 @@ the server can be runned in multi-threads(Not in windows).
 * Server.py
 
 ```python  
-from rabbit_rpc import server as Server
+from rabbitmq_rpc import server as Server
 server = Server.RPCServer(queue_name='default',
                           amqp_url = "amqp://yourname:yourpasswd@10.147.17.135:5672/",
                           threaded=False)
@@ -30,7 +35,7 @@ if __name__ == '__main__':
 * Client.py
 
 ```python
-from rabbit_rpc.client import RPCClient
+from rabbitmq_rpc.client import RPCClient
 import time
 
 def add(i):
@@ -48,7 +53,7 @@ for i in range(300):
 * Client with flask: client_with_flask.py
 
 ```python
-from rabbit_rpc.client import RPCClient
+from rabbitmq_rpc.client import RPCClient
 import flask
 web = flask.Flask(__name__)
 web.debug = True
@@ -76,6 +81,7 @@ if __name__ == '__main__':
 So, create a RPCClient object only in one thread. DO NOT use it in multi-threads. *
 
 ### Original [README](https://github.com/MidTin/rabbit-rpc)
+*Note: replace rabbit_rpc with rabbitmq_rpc*
 
     ==========
     Rabbit RPC 

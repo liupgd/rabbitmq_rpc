@@ -8,7 +8,17 @@ import warnings
 logger = logging.getLogger(__name__)
 
 class Connector(object):
-
+    '''
+    Base connector.
+    Parameters:
+    amqp_url: amqp url to rabbitmq server, format is like this: amqp://yourname:yourpasswd@serverip:serverport/
+    host,port,username, passwd: If amqp_url is not specified, you should specify these server parameters.
+    exchange: exchange in the server
+    threaded: If true, connector will run with pika.SelectionConnection. It's a asynchronous io. Otherwise,
+        pika.BlockConnection will be used. In asynchronous io mode. The RPC server can run in multi-threaded mode.
+        There is no difference for RPC clients.
+    kwargs: Invalid if amqp_url specified. See more from pika.ConnectionParameters
+    '''
     DEFUALT_QUEUE = 'default'
     EXCHANGE_TYPE = 'direct'
     def __init__(self, amqp_url=None,
