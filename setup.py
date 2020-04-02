@@ -23,6 +23,7 @@ setup(
     include_package_data=True,
     description='A modified rabbit_rpc of https://github.com/MidTin/rabbit-rpc',
     long_description=README,
+    long_description_content_type="text/markdown",
     author='leo',
     author_email='liupgd@foxmail.com',
     url='https://github.com/liupgd/rabbitmq_rpc',

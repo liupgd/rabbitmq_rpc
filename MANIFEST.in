@@ -1,2 +1,5 @@
 include README.md
 include LICENSE.txt
+
+global-exclude __pycache__ *.py[cod]
+global-exclude *.so *.dylib

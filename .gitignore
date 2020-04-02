@@ -1,1 +1,8 @@
 *.pyc
+*.swp
+*.swo
+__pycache__
+.idea
+build
+dist
+rabbit_rpc.egg-info
