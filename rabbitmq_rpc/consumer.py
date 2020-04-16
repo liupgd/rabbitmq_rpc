@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import pickle
+import json
 
 import pika
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +21,7 @@ class Consumer(object):
         self.name = name
         self.queue = queue
         self.exclusive = exclusive
+        self.bJsonParameters = False
 
     def consume(self, *args, **kwargs):
         pass
@@ -78,10 +80,13 @@ class MessageDispatcher(object):
         :param pika.channel.Channel channel: The channel object
         :param pika.Spec.Basic.Deliver: basic_deliver method
         :param pika.Spec.BasicProperties: properties
-        :param str|unicode body: The message body
+        :param Bytes or json: The message body
 
         """
-        consumer_name = properties.headers.get('consumer_name')
+        try:
+            consumer_name = properties.headers.get('consumer_name')
+        except :
+            consumer_name = 'default'
 
         logger.info("Received a remote call on function '%s'", consumer_name)
 
@@ -96,10 +101,18 @@ class MessageDispatcher(object):
 
             self.acknowledge_message(basic_deliver.delivery_tag)
             return
-
-        arguments = pickle.loads(body)
+        if not consumer.bJsonParameters:
+            arguments = pickle.loads(body)
+        else:
+            try:
+                arguments = json.loads(body.decode("utf-8"))
+            except Exception as e:
+                logger.error("Load arguments failed: {}".format(e))
+                arguments = {}
         args = arguments.get('args', [])
         kwargs = arguments.get('kwargs', {})
+        if len(args) == 0 and len(kwargs) == 0 and len(arguments):
+            kwargs = arguments
         if not self._threaded:
             self.call_comsumer(consumer, basic_deliver.delivery_tag, properties, *args, **kwargs)
         else:

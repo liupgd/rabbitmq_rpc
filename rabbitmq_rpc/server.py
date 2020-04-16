@@ -20,7 +20,7 @@ class RPCServer(Connector):
         Default -1, means automatically decide number of threads.
     '''
 
-    def __init__(self,queue_name = None, consumers = None, num_threads=-1, *args, **kwargs):
+    def __init__(self,queue_name = None, consumers = None, num_threads=-1, durable = False, auto_delete = True, *args, **kwargs):
         self._queues = {}
         if consumers is None:
             self._consumers = []
@@ -29,13 +29,14 @@ class RPCServer(Connector):
         self.default_queue = queue_name or self.DEFUALT_QUEUE
         self.num_threads =num_threads
 
-        super(RPCServer, self).__init__(*args, **kwargs)
+        super(RPCServer, self).__init__(durable=durable, auto_delete=auto_delete, *args, **kwargs)
 
-    def consumer(self, name=None, queue=None, exclusive=False):
+    def consumer(self, name=None, queue=None, exclusive=False, bJsonArgs = False):
         def decorator(func):
             cname = name or func.__name__
             c = Consumer(cname, queue, exclusive)
             c.consume = func
+            c.bJsonParameters = bJsonArgs
             self._consumers.append(c)
             return func
         return decorator
@@ -79,7 +80,7 @@ class RPCServer(Connector):
 
         # setup the queue on RabbitMQ
         for queue_name in self._queues.keys():
-            self._channel.queue_declare(queue_name,  auto_delete=True, durable=True)
+            self._channel.queue_declare(queue_name,  auto_delete=self.auto_delete, durable=self.durable)
             self._channel.queue_bind(queue_name, exchange=self._exchange)
 
         self.start_consuming()
@@ -121,7 +122,7 @@ class RPCServer(Connector):
         else:
             self._connection = self.connect()
             self._channel = self._connection.channel()
-            self._channel.exchange_declare(self._exchange, exchange_type='direct', auto_delete=True, durable=True)
+            self._channel.exchange_declare(self._exchange, exchange_type='direct', auto_delete=self.auto_delete, durable=self.durable)
             self.on_exchange_declareok(None)
 
     def stop(self):

@@ -23,8 +23,10 @@ class Connector(object):
     EXCHANGE_TYPE = 'direct'
     def __init__(self, amqp_url=None,
                  host = "localhost", port = 5672,
-                 username = "guest", passwd="guest", exchange='default', threaded = True,
+                 username = "guest", passwd="guest", exchange='default', threaded = True, auto_delete = True, durable = False,
                  **kwargs):
+        self.auto_delete = auto_delete
+        self.durable = durable
         self._url = amqp_url
         self._exchange = exchange
         self._host = host
@@ -41,6 +43,8 @@ class Connector(object):
         self._threaded = threaded
         if 'conn_parameters' in kwargs:
             self.conn_parameters = kwargs.get("conn_parameters")
+        else:
+            self.conn_parameters = None
         if amqp_url is not None:
             self.conn_parameters = pika.URLParameters(self._url)
         elif self.conn_parameters is None:
@@ -130,7 +134,7 @@ class Connector(object):
         self._channel.basic_qos(prefetch_count=1)
         self.add_on_channel_close_callback()
         if self._exchange:
-            self.setup_exchange(self._exchange, True)
+            self.setup_exchange(self._exchange)
 
     def add_on_channel_close_callback(self):
         """This method tells pika to call the on_channel_closed method if
@@ -154,7 +158,7 @@ class Connector(object):
         logger.info('Channel closed..')
         self.close_connection()
 
-    def setup_exchange(self, exchange_name, durable=False):
+    def setup_exchange(self, exchange_name):
         """Setup the exchange on RabbitMQ by invoking the Exchange.Declare RPC
         command. When it is complete, the on_exchange_declareok method will
         be invoked by pika.
@@ -163,8 +167,8 @@ class Connector(object):
 
         """
         self._channel.exchange_declare(
-            exchange_name, exchange_type=self.EXCHANGE_TYPE, auto_delete=True,
-            callback=self.on_exchange_declareok, durable=durable)
+            exchange_name, exchange_type=self.EXCHANGE_TYPE, auto_delete=self.auto_delete,
+            callback=self.on_exchange_declareok, durable=self.durable)
 
     def on_exchange_declareok(self, unused_frame):
         """Invoked by pika when RabbitMQ has finished the Exchange.Declare RPC

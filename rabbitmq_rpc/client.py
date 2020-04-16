@@ -6,6 +6,7 @@ import uuid
 import pika
 from .base import Connector
 import pickle
+import json
 
 from .exceptions import (ERROR_FLAG, HAS_ERROR, NO_ERROR, RemoteFunctionError,
                          RemoteCallTimeout)
@@ -14,20 +15,21 @@ logger = logging.getLogger(__name__)
 
 class RPCClient(Connector):
 
-    def __init__(self, **kwargs):
+    def __init__(self, bDataJson = False, **kwargs):
         self._results = {}
         self.callback_queue = None
+        self.bDataJson = bDataJson
         self._local_queues = []
         super(RPCClient, self).__init__(**kwargs)
         self._threaded = False
         self._connection = self.connect()
         self._channel = self._connection.channel()
-        self._channel.exchange_declare(self._exchange, exchange_type='direct', auto_delete=True, durable=True)
+        self._channel.exchange_declare(self._exchange, exchange_type='direct', auto_delete=self.auto_delete, durable=self.durable)
         self.setup_callback_queue()
 
     def setup_callback_queue(self):
         if not self.callback_queue:
-            ret = self._channel.queue_declare(queue="", exclusive=True, auto_delete=True)
+            ret = self._channel.queue_declare(queue="", exclusive=False, auto_delete=self.auto_delete)
             self.callback_queue = ret.method.queue
             self._channel.queue_bind(self.callback_queue, self._exchange)
             self._channel.basic_consume(self.callback_queue,
@@ -51,17 +53,25 @@ class RPCClient(Connector):
         raise RemoteCallTimeout()
 
 
-    def publish_message(self, exchange, routing_key, body, headers=None):
+    def publish_message(self, exchange, routing_key, body, ignore_result = False, headers=None):
         corr_id = str(uuid.uuid4())
+        rply_to = None
+        if not ignore_result:
+            rply_to = self.callback_queue
+        if self.bDataJson:
+            body = json.dumps(body).encode('utf-8')
+        else:
+            body = pickle.dumps(body)
+
         self._channel.basic_publish(
             exchange=exchange,
             routing_key=routing_key,
             properties=pika.BasicProperties(
-                reply_to=self.callback_queue,
+                reply_to=rply_to,
                 headers=headers,
                 correlation_id=corr_id,
             ),
-            body=pickle.dumps(body))
+            body=body)
 
         return corr_id
 
@@ -101,6 +111,7 @@ class RPCClient(Connector):
                 exchange,
                 routing_key,
                 body=payload,
+                ignore_result = ignore_result,
                 headers={'consumer_name': consumer_name})
 
             logger.info('Sent remote call: %s', consumer_name)
@@ -129,4 +140,6 @@ class RPCClient(Connector):
         return super(RPCClient, self).__getattribute__(key)
 
     def __del__(self):
-        self._connection.close()
+        pass
+        # if not self._connection.:
+        #     self._connection.close()
