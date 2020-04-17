@@ -44,7 +44,11 @@ class RPCClient(Connector):
 
     def setup_callback_queue(self):
         if not self.callback_queue:
-            ret = self._channel.queue_declare(queue=self.queue_name, exclusive=False, auto_delete=True)
+            if len(self.queue_name):
+                ret = self._channel.queue_declare(queue=self.queue_name, exclusive=False, auto_delete=self.auto_delete,
+                                                  durable=self.durable)
+            else:
+                ret = self._channel.queue_declare(queue=self.queue_name, exclusive=False, auto_delete=True)
             self.callback_queue = ret.method.queue
             self._channel.queue_bind(self.callback_queue, self._exchange)
             self._channel.basic_consume(self.callback_queue,
