@@ -118,7 +118,7 @@ class MessageDispatcher(object):
         else:
             self._executor.submit(self.call_comsumer, consumer,
                                 basic_deliver.delivery_tag, properties, *args, **kwargs)
-    @ThreadAtomLock()
+    @ThreadAtomLock("_Rply")
     def reply_message(self, props, body, headers=None, is_error=False):
         if headers is None:
             headers = {}
@@ -149,7 +149,7 @@ class MessageDispatcher(object):
 
         self.acknowledge_message(delivery_tag)
 
-    @ThreadAtomLock()
+    @ThreadAtomLock("_Rply")
     def acknowledge_message(self, delivery_tag):
         ret = self._channel.basic_ack(delivery_tag)
 
