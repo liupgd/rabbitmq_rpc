@@ -28,9 +28,12 @@ class RPCServer(Connector):
             self._consumers = consumers
         self.default_queue = queue_name or self.DEFUALT_QUEUE
         self.num_threads =num_threads
-
-        super(RPCServer, self).__init__(durable=durable, auto_delete=auto_delete, *args, **kwargs)
-
+        if num_threads > 0:
+            prefetch_count = num_threads
+        else:
+            prefetch_count = 1
+        super(RPCServer, self).__init__(durable=durable, auto_delete=auto_delete,prefetch_count=prefetch_count,
+                                        *args, **kwargs)
     def consumer(self, name=None, queue=None, exclusive=False, bJsonArgs = False):
         def decorator(func):
             cname = name or func.__name__

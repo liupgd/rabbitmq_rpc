@@ -22,7 +22,7 @@ class Connector(object):
     DEFUALT_QUEUE = 'default'
     EXCHANGE_TYPE = 'direct'
     def __init__(self, amqp_url=None,
-                 host = "localhost", port = 5672,
+                 host = "localhost", port = 5672, prefetch_count = 1,
                  username = "guest", passwd="guest", exchange='default', threaded = True, auto_delete = True, durable = False,
                  **kwargs):
         self.auto_delete = auto_delete
@@ -33,7 +33,7 @@ class Connector(object):
         self._port = port
         self._username = username
         self._passwd = passwd
-
+        self.prefetch_count = prefetch_count
         self._channel = None
         self._connection = None
         self._closing = False
@@ -131,7 +131,7 @@ class Connector(object):
         logger.info('Channel opened..')
 
         self._channel = channel
-        self._channel.basic_qos(prefetch_count=1)
+        self._channel.basic_qos(prefetch_count=self.prefetch_count)
         self.add_on_channel_close_callback()
         if self._exchange:
             self.setup_exchange(self._exchange)
