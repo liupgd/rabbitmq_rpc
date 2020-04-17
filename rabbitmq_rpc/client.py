@@ -14,14 +14,29 @@ from .exceptions import (ERROR_FLAG, HAS_ERROR, NO_ERROR, RemoteFunctionError,
 logger = logging.getLogger(__name__)
 
 class RPCClient(Connector):
+    '''
+    RPC client.
+    Parameters:
+        amqp_url: amqp url connect to rabbitmq server. If this is specified, host ip and port parameters will not be used.
 
-    def __init__(self, bDataJson = False, **kwargs):
+        host, port, username, passwd: Rabbitmq ip address and port and account.
+        durable, auto_delete: The exchange property that this client will connect to. But, RPCClient will create its own
+            queue, whose name is random allocated. This random allocated queue will not be affected by these parameters.
+        virtual_host: Your vhost in rabbitmq server
+        threaded: Invalid in RPCClient
+        exchange: exchange name that will be used.
+        queue_name: queue name you want to connect. If not setted, the queue name will be allocated randomly.
+        bDataJson: Whether your data will be transmitted in json. If setted to false, the data will be transmitted with pickle.
+            This flag should be set if the RPCServer also set to True, otherwise, leave it default.
+    '''
+    def __init__(self, bDataJson = False, queue_name = "",**kwargs):
         self._results = {}
         self.callback_queue = None
         self.bDataJson = bDataJson
         self._local_queues = []
+        self.queue_name = queue_name
         super(RPCClient, self).__init__(**kwargs)
-        self._threaded = False
+        self._threaded = False # Force threaded flag to false
         self._connection = self.connect()
         self._channel = self._connection.channel()
         self._channel.exchange_declare(self._exchange, exchange_type='direct', auto_delete=self.auto_delete, durable=self.durable)
@@ -29,7 +44,7 @@ class RPCClient(Connector):
 
     def setup_callback_queue(self):
         if not self.callback_queue:
-            ret = self._channel.queue_declare(queue="", exclusive=False, auto_delete=self.auto_delete)
+            ret = self._channel.queue_declare(queue=self.queue_name, exclusive=False, auto_delete=True)
             self.callback_queue = ret.method.queue
             self._channel.queue_bind(self.callback_queue, self._exchange)
             self._channel.basic_consume(self.callback_queue,
