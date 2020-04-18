@@ -87,6 +87,8 @@ class MessageDispatcher(object):
             consumer_name = properties.headers.get('consumer_name')
         except :
             consumer_name = 'default'
+        if consumer_name is None:
+            consumer_name = 'default'
 
         logger.info("Received a remote call on function '%s'", consumer_name)
 
