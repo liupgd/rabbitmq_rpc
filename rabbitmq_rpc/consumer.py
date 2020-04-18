@@ -44,8 +44,8 @@ def consumer(name=None, queue=None, exclusive=False):
 
     return decorator
 
+ReplyLockName = "_MsgReply"
 class MessageDispatcher(object):
-
     def __init__(self, channel, exchange='', threaded = True, threadpool_size = -1):
         self._channel = channel
         self.threads = []
@@ -118,7 +118,7 @@ class MessageDispatcher(object):
         else:
             self._executor.submit(self.call_comsumer, consumer,
                                 basic_deliver.delivery_tag, properties, *args, **kwargs)
-    @ThreadAtomLock("_Rply")
+    @ThreadAtomLock(ReplyLockName)
     def reply_message(self, props, body, headers=None, is_error=False):
         if headers is None:
             headers = {}
@@ -149,7 +149,7 @@ class MessageDispatcher(object):
 
         self.acknowledge_message(delivery_tag)
 
-    @ThreadAtomLock("_Rply")
+    @ThreadAtomLock(ReplyLockName)
     def acknowledge_message(self, delivery_tag):
         ret = self._channel.basic_ack(delivery_tag)
 
