@@ -26,7 +26,11 @@ class ThreadAtomLock(object):
     def __call__(self, func):
         def _atom(*arg, **kw):
             self.lock.acquire()
-            v = func(*arg, **kw)
+            try:
+                v = func(*arg, **kw)
+            except Exception as e:
+                self.lock.release()
+                raise
             self.lock.release()
             return v
         return _atom
