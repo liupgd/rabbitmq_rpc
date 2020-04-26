@@ -9,7 +9,7 @@ from .credentials import AliyunCredentialsProvider
 
 LOG_FORMAT = (
     '%(levelname)s %(asctime)s %(name)s %(funcName)s %(lineno)s: %(message)s')
-logging.basicConfig(level=logging.ERROR, format=LOG_FORMAT)
+logging.basicConfig(level=logging.WARNING, format=LOG_FORMAT)
 
 __all__ = [
     'consumer', 'Consumer', 'RPCClient', 'RPCServer',

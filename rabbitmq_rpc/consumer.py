@@ -10,7 +10,7 @@ from six import python_2_unicode_compatible
 from .threadtool import ThreadAtomLock
 
 from .exceptions import ERROR_FLAG, HAS_ERROR, NO_ERROR
-
+from functools import partial
 logger = logging.getLogger(__name__)
 
 
@@ -46,9 +46,9 @@ def consumer(name=None, queue=None, exclusive=False):
 
 ReplyLockName = "_MsgReply"
 class MessageDispatcher(object):
-    def __init__(self, channel, exchange='', threaded = True, threadpool_size = -1):
+    def __init__(self, connection, channel, exchange='', threaded = True, threadpool_size = -1):
+        self._connection = connection
         self._channel = channel
-        self.threads = []
         self._registries = {}
         if threadpool_size <= 0:
             self._executor = ThreadPoolExecutor()
@@ -111,10 +111,18 @@ class MessageDispatcher(object):
             except Exception as e:
                 logger.error("Load arguments failed: {}".format(e))
                 arguments = {}
-        args = arguments.get('args', [])
-        kwargs = arguments.get('kwargs', {})
-        if len(args) == 0 and len(kwargs) == 0 and len(arguments):
-            kwargs = arguments
+        if not isinstance(arguments, dict):
+            if isinstance(arguments, list):
+                args = arguments
+                kwargs = {}
+            else:
+                args = []
+                kwargs = {"ErrorInfo":"Invalid parameters"}
+        else:
+            args = arguments.get('args', [])
+            kwargs = arguments.get('kwargs', {})
+            if len(args) == 0 and len(kwargs) == 0 and len(arguments):
+                kwargs = arguments
         if not self._threaded:
             self.call_comsumer(consumer, basic_deliver.delivery_tag, properties, *args, **kwargs)
         else:
@@ -126,14 +134,14 @@ class MessageDispatcher(object):
             headers = {}
 
         headers[ERROR_FLAG] = NO_ERROR if not is_error else HAS_ERROR
-
-        self._channel.basic_publish(
-            exchange=self._exchange,
-            routing_key=props.reply_to,
-            properties=pika.BasicProperties(
-                correlation_id=props.correlation_id,
-                headers=headers),
-            body=pickle.dumps(body))
+        self._connection.ioloop.add_callback_threadsafe(partial(self._channel.basic_publish,
+                                                                    exchange=self._exchange,
+                                                                    routing_key=props.reply_to,
+                                                                    properties=pika.BasicProperties(
+                                                                        correlation_id=props.correlation_id,
+                                                                        headers=headers),
+                                                                    body=pickle.dumps(body)
+                                                                ))
 
     def call_comsumer(self, consumer, delivery_tag, props, *args, **kwargs):
         try:
@@ -153,7 +161,8 @@ class MessageDispatcher(object):
 
     @ThreadAtomLock(ReplyLockName)
     def acknowledge_message(self, delivery_tag):
-        ret = self._channel.basic_ack(delivery_tag)
+        self._connection.ioloop.add_callback_threadsafe(partial(self._channel.basic_ack, delivery_tag))
+        # ret = self._channel.basic_ack(delivery_tag)
 
     def __contains__(self, consumer_name):
         return consumer_name in self._registries

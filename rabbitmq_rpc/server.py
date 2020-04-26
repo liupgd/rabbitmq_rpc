@@ -48,7 +48,7 @@ class RPCServer(Connector):
         self.setup_queues()
 
     def _setup_queue(self, queue_name):
-        dispatcher = MessageDispatcher(self._channel, self._exchange, threaded=self._threaded,
+        dispatcher = MessageDispatcher(self._connection, self._channel, self._exchange, threaded=self._threaded,
                                        threadpool_size=self.num_threads)
         queue = Queue(queue_name, dispatcher)
         self._queues[queue_name] = queue
