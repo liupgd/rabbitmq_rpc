@@ -57,7 +57,9 @@ class ThreadPool(object):
         在调用func时，func会使用多线程执行，但一次最多开启3个线程。当线程池中有线程结束后，
         才允许新的线程加入线程池
     '''
-    def __init__(self, pool_size, bReturnObj = False):
+    def __init__(self, pool_size=-1, bReturnObj = False):
+        if pool_size <= 0:
+            pool_size = os.cpu_count()
         self.pool_size = pool_size
         self.flag_pool = queue.Queue(pool_size)
         self._thread_in_pool = [None]*pool_size
