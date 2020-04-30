@@ -91,36 +91,42 @@ class MessageDispatcher(object):
             consumer_name = 'default'
 
         logger.info("Received a remote call on function '%s'", consumer_name)
-
+        old_consumer_name = consumer_name
+        if consumer_name not in self._registries:
+            consumer_name = "default"
         try:
             consumer = self._registries[consumer_name]
         except KeyError:
-            msg = "Function '%s' not found." % consumer_name
+            msg = "Function '%s' not found." % old_consumer_name
             logger.info(msg)
             if properties.reply_to:
                 self.reply_message(
                     properties, msg, is_error=True)
-
             self.acknowledge_message(basic_deliver.delivery_tag)
             return
-        if not consumer.bJsonParameters:
-            arguments = pickle.loads(body)
-        else:
-            try:
-                arguments = json.loads(body.decode("utf-8"))
-            except Exception as e:
-                logger.error("Load arguments failed: {}".format(e))
-                arguments = {}
+
+        try:
+            if not consumer.bJsonParameters:
+                arguments = pickle.loads(body)
+            else:
+                arguments = json.loads(body.decode('utf-8'))
+        except Exception as e:
+            logger.error("Load arguments failed: {}".format(e))
+            arguments = {}
         if not isinstance(arguments, dict):
-            if isinstance(arguments, list):
+            if isinstance(arguments, list) or isinstance(arguments, tuple):
                 args = arguments
                 kwargs = {}
             else:
                 args = []
-                kwargs = {"ErrorInfo":"Invalid parameters"}
+                kwargs = {"ErrorInfo":f"Invalid parameters, original arguments: {arguments}, original body: {body}"}
         else:
             args = arguments.get('args', [])
             kwargs = arguments.get('kwargs', {})
+            if not (isinstance(args, list) or isinstance(args, tuple)):
+                args = [args]
+            if not isinstance(kwargs, dict):
+                kwargs = {'kwargs':kwargs}
             if len(args) == 0 and len(kwargs) == 0 and len(arguments):
                 kwargs = arguments
         if not self._threaded:
