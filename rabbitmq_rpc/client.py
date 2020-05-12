@@ -44,11 +44,11 @@ class RPCClient(Connector):
 
     def setup_callback_queue(self):
         if not self.callback_queue:
-            if len(self.queue_name):
-                ret = self._channel.queue_declare(queue=self.queue_name, exclusive=False, auto_delete=self.auto_delete,
-                                                  durable=self.durable)
-            else:
-                ret = self._channel.queue_declare(queue=self.queue_name, exclusive=False, auto_delete=True)
+            # if len(self.queue_name):
+            #     ret = self._channel.queue_declare(queue=self.queue_name, exclusive=False, auto_delete=self.auto_delete,
+            #                                       durable=self.durable)
+            # else:
+            ret = self._channel.queue_declare(queue="", exclusive=False, auto_delete=True)
             self.callback_queue = ret.method.queue
             self._channel.queue_bind(self.callback_queue, self._exchange)
             self._channel.basic_consume(self.callback_queue,
@@ -56,7 +56,10 @@ class RPCClient(Connector):
                                        auto_ack=True)
 
     def on_response(self, channel, basic_deliver, props, body):
-        ret = pickle.loads(body)
+        if self.bDataJson:
+            ret = json.loads(body.decode('utf-8'))
+        else:
+            ret = pickle.loads(body)
         if props.headers.get(ERROR_FLAG, NO_ERROR) == HAS_ERROR:
             ret = RemoteFunctionError(ret)
         self._results[props.correlation_id] = ret
@@ -108,10 +111,10 @@ class RPCClient(Connector):
             :param float timeout: if waiting the result over timeount seconds,
                                   RemoteCallTimeout will be raised .
             """
-            ignore_result = kwargs.pop('ignore_result', False)
-            exchange = kwargs.pop('exchange', self._exchange)
-            routing_key = kwargs.pop('routing_key', self._exchange)
-            timeout = kwargs.pop('timeout', None)
+            ignore_result = kwargs.pop('__ignore_result', False)
+            exchange = kwargs.pop('__exchange', self._exchange)
+            routing_key = kwargs.pop('__routing_key', self.queue_name)
+            timeout = kwargs.pop('__timeout', None)
 
             if not ignore_result:
                 self.setup_callback_queue()
